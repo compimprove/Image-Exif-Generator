@@ -137,6 +137,6 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               --verify-tag \
-              --title "Image Exif Reset $GITHUB_REF_NAME" \
+              --title "Image EXIF Reset $GITHUB_REF_NAME" \
               --generate-notes
           fi

@@ -15,7 +15,7 @@ import org.compi.image_exif_reset.processing.ImageResetProcessor
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "Image Exif Reset",
+        title = "Image EXIF Reset",
     ) {
         val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
         val controller = remember {

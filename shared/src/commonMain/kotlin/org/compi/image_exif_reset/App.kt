@@ -69,7 +69,7 @@ fun App(
                     .padding(32.dp),
             ) {
                 Text(
-                    text = "Image Exif Reset",
+                    text = "Image EXIF Reset",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = Ink,

@@ -1,4 +1,4 @@
-# Image Exif Reset
+# Image EXIF Reset
 
 A focused Compose Desktop utility that creates sanitized JPEG, PNG, and WebP
 copies. Drop images into the window and the app writes `*_new_images` files
@@ -42,3 +42,8 @@ The tag must match `v<major>.<minor>.<patch>`. The workflow removes the leading
 `v`, uses the remaining value as the native package version, builds an Apple
 Silicon DMG and Windows x64 MSI, and attaches both installers to the GitHub
 Release for that tag.
+
+The Windows MSI installs under Program Files by default, lets the user choose a
+different destination, and creates both a desktop shortcut and an Image EXIF
+Reset entry in the Start Menu. A stable upgrade identifier allows newer MSI
+releases to upgrade the existing installation.
