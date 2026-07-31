@@ -2,13 +2,13 @@ package org.compi.image_exif_reset.processing
 
 import org.compi.image_exif_reset.metadata.MetadataEngine
 import org.compi.image_exif_reset.model.ResetResult
+import org.compi.image_exif_reset.model.SupportedImageFormat
 import org.compi.image_exif_reset.model.TaskStatus
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.util.UUID
-import kotlin.io.path.extension
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
@@ -24,34 +24,36 @@ class ImageResetProcessor(
             return ResetResult(null, TaskStatus.SKIPPED, "File does not exist")
         }
 
-        val output = outputPathFor(normalizedInput)
-        val temporaryOutput = normalizedInput.parent.resolve(
-            ".${normalizedInput.nameWithoutExtension}.reset-${UUID.randomUUID()}.${normalizedInput.extension}",
-        )
+        var temporaryOutput: Path? = null
         return try {
             val source = metadataEngine.inspect(normalizedInput)
+            val output = outputPathFor(normalizedInput, source.format)
+            temporaryOutput = normalizedInput.parent.resolve(
+                ".${normalizedInput.nameWithoutExtension}.reset-${UUID.randomUUID()}.${source.format.fileExtension}",
+            )
             val generated = metadataEngine.reset(normalizedInput, temporaryOutput, source)
             metadataEngine.verify(source, temporaryOutput, generated)
             replaceAtomically(temporaryOutput, output)
             ResetResult(output.toString(), TaskStatus.COMPLETED, output.fileName.toString())
         } catch (error: Exception) {
-            Files.deleteIfExists(temporaryOutput)
+            temporaryOutput?.let { Files.deleteIfExists(it) }
             ResetResult(
                 outputPath = null,
-                status = if (error.message?.contains("unsupported", ignoreCase = true) == true ||
-                    error.message?.contains("extension does not match", ignoreCase = true) == true
-                ) TaskStatus.SKIPPED else TaskStatus.FAILED,
+                status = if (error.message?.contains("unsupported", ignoreCase = true) == true) {
+                    TaskStatus.SKIPPED
+                } else {
+                    TaskStatus.FAILED
+                },
                 message = friendlyMessage(error),
             )
         }
     }
 
-    fun outputPathFor(input: Path): Path {
+    fun outputPathFor(input: Path, format: SupportedImageFormat): Path {
         val filename = input.fileName.toString()
         val dotIndex = filename.lastIndexOf('.')
         val base = if (dotIndex > 0) filename.substring(0, dotIndex) else filename
-        val extension = if (dotIndex > 0) filename.substring(dotIndex) else ""
-        return input.parent.resolve("${base}_new_images$extension")
+        return input.parent.resolve("${base}_new_images.${format.fileExtension}")
     }
 
     private fun replaceAtomically(temporaryOutput: Path, output: Path) {

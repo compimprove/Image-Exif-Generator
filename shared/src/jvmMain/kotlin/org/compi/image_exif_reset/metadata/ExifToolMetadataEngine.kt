@@ -12,7 +12,6 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import kotlin.io.path.extension
 
 class ExifToolMetadataEngine(
     commandPrefix: List<String> = ExifToolLocator().commandPrefix(),
@@ -42,11 +41,6 @@ class ExifToolMetadataEngine(
             fileType.endsWith("WEBP") -> SupportedImageFormat.WEBP
             else -> throw MetadataException("Unsupported image format")
         }
-        val extension = input.extension.lowercase()
-        if (extension !in format.extensions) {
-            throw MetadataException("File extension does not match its ${format.name} content")
-        }
-
         val colorComponents = values.optional(6)?.toIntOrNull()
         val colorType = values.optional(7).orEmpty()
         val colorMode = when {

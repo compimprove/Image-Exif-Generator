@@ -13,6 +13,7 @@ import org.compi.image_exif_reset.model.TaskStatus
 import java.net.URI
 import java.nio.file.Path
 import java.util.UUID
+import kotlin.io.path.nameWithoutExtension
 
 class ImageResetController(
     private val processor: ImageResetProcessor,
@@ -60,8 +61,12 @@ class ImageResetController(
     }
 
     private suspend fun process(entry: QueueEntry) {
-        val affectedPaths = listOf(entry.path, processor.outputPathFor(entry.path))
-            .map { it.toAbsolutePath().normalize().toString() }
+        val normalizedPath = entry.path.toAbsolutePath().normalize()
+        val affectedPaths = listOf(
+            normalizedPath.parent.resolve(normalizedPath.nameWithoutExtension),
+            normalizedPath.parent.resolve("${normalizedPath.nameWithoutExtension}_new_images"),
+        )
+            .map(Path::toString)
             .distinct()
             .sorted()
 

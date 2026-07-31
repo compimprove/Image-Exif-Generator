@@ -74,7 +74,7 @@ class ExifToolMetadataEngineTest {
     }
 
     @Test
-    fun rejectsUnsupportedAndFalseExtensionsWithoutCreatingOutput() {
+    fun rejectsUnsupportedFilesAndCorrectsFalseExtensions() {
         val directory = createTempDirectory("image-reset-invalid-")
         val unsupported = directory.resolve("notes.txt")
         Files.writeString(unsupported, "not an image")
@@ -82,7 +82,11 @@ class ExifToolMetadataEngineTest {
         val processor = ImageResetProcessor(engine)
 
         assertEquals(TaskStatus.SKIPPED, processor.process(unsupported).status)
-        assertEquals(TaskStatus.SKIPPED, processor.process(falseExtension).status)
+        val corrected = processor.process(falseExtension)
+        assertEquals(TaskStatus.COMPLETED, corrected.status, corrected.message)
+        val correctedOutput = Path.of(requireNotNull(corrected.outputPath))
+        assertEquals("wrong_new_images.png", correctedOutput.name)
+        assertEquals("PNG", engine.inspect(correctedOutput).format.name)
         assertFalse(directory.resolve("notes_new_images.txt").exists())
         assertFalse(directory.resolve("wrong_new_images.jpg").exists())
     }

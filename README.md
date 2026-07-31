@@ -5,6 +5,10 @@ copies. Drop images into the window and the app writes `*_new_images` files
 beside the originals. Independent images run concurrently through a small,
 bounded worker pool for faster batches.
 
+The encoded image type is detected from the file itself. If a filename has the
+wrong extension, the verified output uses the correct `.jpg`, `.png`, or
+`.webp` extension.
+
 The reset removes existing writable metadata and embedded C2PA/JUMBF
 credentials, retains Orientation and the ICC color profile, and adds the fixed
 Photoshop 25.6 metadata profile defined by the application.

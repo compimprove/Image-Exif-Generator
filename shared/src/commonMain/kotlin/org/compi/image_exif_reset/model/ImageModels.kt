@@ -16,10 +16,10 @@ data class ImageTask(
     val detail: String = "Queued",
 )
 
-enum class SupportedImageFormat(val mimeType: String, val extensions: Set<String>) {
-    JPEG("image/jpeg", setOf("jpg", "jpeg", "jpe")),
-    PNG("image/png", setOf("png")),
-    WEBP("image/webp", setOf("webp")),
+enum class SupportedImageFormat(val mimeType: String, val fileExtension: String) {
+    JPEG("image/jpeg", "jpg"),
+    PNG("image/png", "png"),
+    WEBP("image/webp", "webp"),
 }
 
 data class MetadataSnapshot(
