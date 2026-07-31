@@ -1,0 +1,16 @@
+ExifTool 13.59
+Copyright 2003-2026, Phil Harvey
+
+ExifTool is distributed under the same terms as Perl itself. The complete
+ExifTool README is included in each platform resource directory. The Windows
+standalone distribution also includes its component licenses in the bundled
+exiftool_files directory.
+
+Project: https://exiftool.org/
+License information: https://dev.perl.org/licenses/
+
+Pinned source archive SHA-256:
+668ea3acececb7235fbd0f4900e72d5f12c9b07e5c778fd36cb1e9b5828fd65a
+
+Pinned Windows x64 archive SHA-256:
+44b512b25af500724ba579d0a53c8fc5851628b692dd5e5d94ae4a15c2cba9ec
