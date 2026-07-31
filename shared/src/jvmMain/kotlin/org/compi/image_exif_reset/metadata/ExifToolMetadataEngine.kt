@@ -72,8 +72,11 @@ class ExifToolMetadataEngine(
         )
     }
 
-    override fun reset(input: Path, temporaryOutput: Path): GeneratedMetadata {
-        val source = inspect(input)
+    override fun reset(
+        input: Path,
+        temporaryOutput: Path,
+        source: MetadataSnapshot,
+    ): GeneratedMetadata {
         Files.copy(input, temporaryOutput)
 
         val now = Instant.now().truncatedTo(ChronoUnit.SECONDS)
@@ -184,18 +187,18 @@ class ExifToolMetadataEngine(
             !isValidXmpUuid(generated.instanceId, "xmp.iid:")) {
             mismatches += "generated identifiers are invalid"
         }
-        if (extractBinary(output, "-JUMBF") != null) mismatches += "embedded C2PA/JUMBF remains"
-        if (hasSensitiveMetadata(output)) mismatches += "old sensitive metadata remains"
+        if (hasForbiddenMetadata(output)) mismatches += "old sensitive metadata or C2PA/JUMBF remains"
 
         if (mismatches.isNotEmpty()) {
             throw MetadataException("Verification failed: ${mismatches.distinct().joinToString()}")
         }
     }
 
-    private fun hasSensitiveMetadata(path: Path): Boolean {
+    private fun hasForbiddenMetadata(path: Path): Boolean {
         val result = runner.run(
             listOf(
                 "-s3",
+                "-JUMBF:all",
                 "-GPS:all",
                 "-MakerNotes:all",
                 "-IPTC:all",

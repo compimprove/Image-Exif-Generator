@@ -2,7 +2,8 @@
 
 A focused Compose Desktop utility that creates sanitized JPEG, PNG, and WebP
 copies. Drop images into the window and the app writes `*_new_images` files
-beside the originals.
+beside the originals. Independent images run concurrently through a small,
+bounded worker pool for faster batches.
 
 The reset removes existing writable metadata and embedded C2PA/JUMBF
 credentials, retains Orientation and the ICC color profile, and adds the fixed

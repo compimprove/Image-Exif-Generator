@@ -5,6 +5,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.compi.image_exif_reset.model.ImageTask
 import org.compi.image_exif_reset.model.TaskStatus
@@ -15,15 +17,20 @@ import java.util.UUID
 class ImageResetController(
     private val processor: ImageResetProcessor,
     private val scope: CoroutineScope,
+    workerCount: Int = defaultWorkerCount(),
 ) {
     val tasks = mutableStateListOf<ImageTask>()
 
     private val queuedPaths = mutableSetOf<String>()
+    private val pathLocks = mutableMapOf<String, Mutex>()
     private val queue = Channel<QueueEntry>(Channel.UNLIMITED)
 
     init {
-        scope.launch {
-            for (entry in queue) process(entry)
+        require(workerCount > 0) { "workerCount must be positive" }
+        repeat(workerCount) {
+            scope.launch {
+                for (entry in queue) process(entry)
+            }
         }
     }
 
@@ -53,10 +60,28 @@ class ImageResetController(
     }
 
     private suspend fun process(entry: QueueEntry) {
-        update(entry.taskId) { it.copy(status = TaskStatus.PROCESSING, detail = "Resetting metadata…") }
-        val result = withContext(Dispatchers.IO) { processor.process(entry.path) }
-        update(entry.taskId) { it.copy(status = result.status, detail = result.message) }
-        queuedPaths.remove(entry.pathKey)
+        val affectedPaths = listOf(entry.path, processor.outputPathFor(entry.path))
+            .map { it.toAbsolutePath().normalize().toString() }
+            .distinct()
+            .sorted()
+
+        withPathLocks(affectedPaths) {
+            update(entry.taskId) { it.copy(status = TaskStatus.PROCESSING, detail = "Resetting metadata…") }
+            val result = withContext(Dispatchers.IO) { processor.process(entry.path) }
+            update(entry.taskId) { it.copy(status = result.status, detail = result.message) }
+            queuedPaths.remove(entry.pathKey)
+        }
+    }
+
+    private suspend fun <T> withPathLocks(
+        paths: List<String>,
+        index: Int = 0,
+        block: suspend () -> T,
+    ): T {
+        if (index == paths.size) return block()
+        return pathLocks.getOrPut(paths[index]) { Mutex() }.withLock {
+            withPathLocks(paths, index + 1, block)
+        }
     }
 
     private fun update(id: String, transform: (ImageTask) -> ImageTask) {
@@ -69,4 +94,13 @@ class ImageResetController(
         val path: Path,
         val pathKey: String,
     )
+
+    companion object {
+        /**
+         * ExifTool work is both CPU and disk intensive. Four workers provide good batch throughput
+         * without creating an unbounded number of processes or making lower-end machines unusable.
+         */
+        internal fun defaultWorkerCount(): Int =
+            Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+    }
 }

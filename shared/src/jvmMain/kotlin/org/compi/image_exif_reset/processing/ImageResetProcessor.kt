@@ -30,7 +30,7 @@ class ImageResetProcessor(
         )
         return try {
             val source = metadataEngine.inspect(normalizedInput)
-            val generated = metadataEngine.reset(normalizedInput, temporaryOutput)
+            val generated = metadataEngine.reset(normalizedInput, temporaryOutput, source)
             metadataEngine.verify(source, temporaryOutput, generated)
             replaceAtomically(temporaryOutput, output)
             ResetResult(output.toString(), TaskStatus.COMPLETED, output.fileName.toString())
