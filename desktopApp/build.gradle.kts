@@ -95,8 +95,9 @@ tasks.withType<AbstractJPackageTask>().configureEach {
             .orElse(providers.environmentVariable("RUNNER_TEMP"))
             .orElse(providers.systemProperty("java.io.tmpdir"))
         val packagingTemp = File(tempBase.get(), "jp-${UUID.randomUUID().toString().take(8)}")
-        val wixResources = layout.buildDirectory.dir("windows-wix-resources").get().asFile
-        freeArgs.addAll("--temp", packagingTemp.absolutePath, "--resource-dir", wixResources.absolutePath)
+        // Compose 1.11 supplies --resource-dir after freeArgs, so use its actual resource directory.
+        val wixResources = layout.buildDirectory.dir("compose/tmp/resources").get().asFile
+        freeArgs.addAll("--temp", packagingTemp.absolutePath)
         doFirst {
             // Use the selected JDK's own template, changing only cabinet layout.
             val template = ZipFile(File(javaHome.get(), "jmods/jdk.jpackage.jmod")).use { jmod ->
