@@ -86,4 +86,18 @@ tasks.matching { it.name == "createDistributable" }.configureEach {
 // Preserve the underlying WiX/jpackage error in CI diagnostics.
 tasks.withType<AbstractJPackageTask>().configureEach {
     freeArgs.add("--verbose")
+    if (targetFormat == TargetFormat.Msi) {
+        // WiX 3 cannot resolve the long Python paths under jpackage's default temp root.
+        val tempBase = providers.gradleProperty("windowsJpackageTempDir")
+            .orElse(providers.environmentVariable("RUNNER_TEMP"))
+            .orElse(providers.systemProperty("java.io.tmpdir"))
+        val packagingTemp = java.io.File(tempBase.get(), "jp-${java.util.UUID.randomUUID().toString().take(8)}")
+        freeArgs.addAll("--temp", packagingTemp.absolutePath)
+        doFirst {
+            // This task owns this uniquely named directory, including after a failed build.
+            packagingTemp.deleteRecursively()
+            check(packagingTemp.mkdirs()) { "Cannot create jpackage working directory: $packagingTemp" }
+        }
+        doLast { packagingTemp.deleteRecursively() }
+    }
 }

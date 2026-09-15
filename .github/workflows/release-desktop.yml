@@ -136,6 +136,26 @@ jobs:
         shell: pwsh
         run: .\gradlew.bat --no-daemon build :desktopApp:packageMsi
 
+      - name: Verify installed Windows runtime
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem desktopApp/build/compose/binaries/main/msi/*.msi
+          if (@($msi).Count -ne 1) { throw 'Expected exactly one MSI' }
+          $installRoot = Join-Path $env:RUNNER_TEMP 'installed image exif'
+          $logs = New-Item -ItemType Directory -Force desktopApp/build/compose/logs/installer-smoke
+          $installLog = Join-Path $logs.FullName 'install.log'
+          try {
+            $process = Start-Process msiexec.exe -ArgumentList @('/i', "`"$($msi.FullName)`"", '/qn', '/norestart', "INSTALLDIR=`"$installRoot`"", '/L*v', "`"$installLog`"") -Wait -PassThru
+            if ($process.ExitCode -notin @(0, 3010)) { throw "MSI installation failed: $($process.ExitCode)" }
+            $python = Join-Path $installRoot 'app/resources/synthid/python/python.exe'
+            & $python -I -c "import torch, torchvision, diffusers, transformers, controlnet_aux, color_matcher; assert torch.version.cuda == '12.4'; assert torch.ones(1).sum().item() == 1; print('Installed CUDA runtime imports and CPU tensor operation OK')"
+            if ($LASTEXITCODE -ne 0) { throw 'Installed runtime verification failed' }
+          } finally {
+            $uninstallLog = Join-Path $logs.FullName 'uninstall.log'
+            $process = Start-Process msiexec.exe -ArgumentList @('/x', "`"$($msi.FullName)`"", '/qn', '/norestart', '/L*v', "`"$uninstallLog`"") -Wait -PassThru
+            if ($process.ExitCode -notin @(0, 1605, 3010)) { throw "MSI uninstall failed: $($process.ExitCode)" }
+          }
+
       - name: Print Windows packaging diagnostics
         if: failure()
         shell: pwsh

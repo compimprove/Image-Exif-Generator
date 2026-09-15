@@ -111,3 +111,11 @@ packaged engine end-to-end, set `IMAGE_EXIF_RESET_MODEL_TEST=1` and
 `IMAGE_EXIF_RESET_SYNTHID_ENGINE` to the package's `resources/synthid` directory,
 then run `:shared:jvmTest --tests '*RealSynthIdIntegrationTest'`. This exercises
 real regeneration and metadata verification, not SynthID detection accuracy.
+
+Installer packaging also runs on pull requests, without publishing a release.
+Windows CI installs the MSI, checks the installed Python/CUDA runtime, and
+uninstalls it. Failed packaging logs are retained as workflow artifacts.
+
+Windows MSI builds use a short, task-owned jpackage working directory to keep
+bundled Python paths within WiX 3's path limits. Local builds can override its
+parent with `-PwindowsJpackageTempDir=C:/temp` if the user temp path is too long.
