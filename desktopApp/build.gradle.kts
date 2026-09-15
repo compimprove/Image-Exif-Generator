@@ -1,3 +1,5 @@
+import java.io.File
+import java.util.UUID
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
@@ -91,7 +93,7 @@ tasks.withType<AbstractJPackageTask>().configureEach {
         val tempBase = providers.gradleProperty("windowsJpackageTempDir")
             .orElse(providers.environmentVariable("RUNNER_TEMP"))
             .orElse(providers.systemProperty("java.io.tmpdir"))
-        val packagingTemp = java.io.File(tempBase.get(), "jp-${java.util.UUID.randomUUID().toString().take(8)}")
+        val packagingTemp = File(tempBase.get(), "jp-${UUID.randomUUID().toString().take(8)}")
         freeArgs.addAll("--temp", packagingTemp.absolutePath)
         doFirst {
             // This task owns this uniquely named directory, including after a failed build.
