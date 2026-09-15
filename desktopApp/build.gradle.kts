@@ -8,6 +8,22 @@ plugins {
 
 val releaseVersion = providers.environmentVariable("RELEASE_VERSION").orElse("1.0.0")
 
+// Merge generated Python binaries with existing platform resources for packaging.
+val stageBundledResources by tasks.registering(Sync::class) {
+    dirPermissions { unix("755") }
+    filePermissions { unix("755") }
+    from("src/main/appResources")
+    from(layout.buildDirectory.dir("synthid")) {
+        exclude("worker.py", "models.json", "THIRD_PARTY.md")
+        into("common/synthid")
+    }
+    from(rootProject.layout.projectDirectory.dir("synthid")) {
+        include("worker.py", "models.json", "THIRD_PARTY.md")
+        into("common/synthid")
+    }
+    into(layout.buildDirectory.dir("packagedResources"))
+}
+
 dependencies {
     implementation(project(":shared"))
 
@@ -22,7 +38,7 @@ compose.desktop {
         mainClass = "org.compi.image_exif_reset.MainKt"
 
         nativeDistributions {
-            appResourcesRootDir.set(project.layout.projectDirectory.dir("src/main/appResources"))
+            appResourcesRootDir.set(layout.buildDirectory.dir("packagedResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi)
             packageName = "Image EXIF Reset"
             packageVersion = releaseVersion.get().also { version ->
@@ -40,5 +56,28 @@ compose.desktop {
             }
             modules("java.desktop")
         }
+    }
+}
+
+tasks.matching { it.name == "prepareAppResources" }.configureEach {
+    dependsOn(stageBundledResources)
+}
+tasks.matching { it.name in listOf("run", "createDistributable", "packageDmg", "packageMsi") }.configureEach {
+    dependsOn(stageBundledResources)
+}
+tasks.matching { it.name in listOf("createDistributable", "packageDmg", "packageMsi") }.configureEach {
+    inputs.dir(layout.buildDirectory.dir("packagedResources"))
+}
+
+// jpackage copies application resources without retaining executable bits.
+val packagedPythonBin = layout.buildDirectory.dir(
+    "compose/binaries/main/app/Image EXIF Reset.app/Contents/app/resources/synthid/python/bin",
+)
+tasks.matching { it.name == "createDistributable" }.configureEach {
+    val pythonBin = packagedPythonBin.get().asFile
+    doLast {
+        pythonBin.listFiles()
+            ?.filter { it.name.startsWith("python") }
+            ?.forEach { check(it.setExecutable(true, false)) { "Cannot make bundled Python executable: $it" } }
     }
 }

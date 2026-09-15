@@ -1,0 +1,18 @@
+{
+  "yepengliu/ctrlregen": {
+    "revision": "c878b18b442d32701ef75c6c2b78b5052f5373e6",
+    "patterns": ["spatialnet_ckp/spatial_control_ckp_14000/*", "semanticnet_ckp/models/semantic_control_ckp_435000.bin"]
+  },
+  "SG161222/Realistic_Vision_V4.0_noVAE": {
+    "revision": "1685907c0283c7278ba26c5fe561506f564b48d3",
+    "patterns": ["model_index.json", "scheduler/*", "tokenizer/*", "text_encoder/config.json", "text_encoder/model.safetensors", "unet/config.json", "unet/diffusion_pytorch_model.safetensors", "vae/config.json", "vae/diffusion_pytorch_model.safetensors"]
+  },
+  "stabilityai/sd-vae-ft-mse": {
+    "revision": "31f26fdeee1355a5c34592e401dd41e45d25a493",
+    "patterns": ["config.json", "diffusion_pytorch_model.safetensors"]
+  },
+  "facebook/dinov2-giant": {
+    "revision": "611a9d42f2335e0f921f1e313ad3c1b7178d206d",
+    "patterns": ["config.json", "preprocessor_config.json", "model.safetensors"]
+  }
+}

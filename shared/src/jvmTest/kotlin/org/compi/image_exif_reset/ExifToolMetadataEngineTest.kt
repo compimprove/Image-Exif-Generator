@@ -85,10 +85,57 @@ class ExifToolMetadataEngineTest {
         val corrected = processor.process(falseExtension)
         assertEquals(TaskStatus.COMPLETED, corrected.status, corrected.message)
         val correctedOutput = Path.of(requireNotNull(corrected.outputPath))
-        assertEquals("wrong_new_images.png", correctedOutput.name)
-        assertEquals("PNG", engine.inspect(correctedOutput).format.name)
+        assertEquals("wrong_new_images.jpg", correctedOutput.name)
+        assertEquals("JPEG", engine.inspect(correctedOutput).format.name)
         assertFalse(directory.resolve("notes_new_images.txt").exists())
-        assertFalse(directory.resolve("wrong_new_images.jpg").exists())
+        assertFalse(directory.resolve("wrong_new_images.png").exists())
+    }
+
+    @Test
+    fun convertsEverySupportedFormatAndPreservesOriginalsAndOrientation() {
+        val directory = createTempDirectory("image-reset-conversion-")
+        try {
+            val fixtures = listOf(
+                createImageIoFixture(directory.resolve("jpeg.jpg"), "jpeg") to "PNG",
+                createImageIoFixture(directory.resolve("png.png"), "png") to "JPEG",
+                createWebpFixture(directory.resolve("webp.webp")) to "JPEG",
+            )
+            fixtures.forEach { (input, expectedFormat) ->
+                seedPrivateMetadata(input, ICC_Profile.getInstance(ColorSpace.CS_sRGB).data)
+                val original = Files.readAllBytes(input)
+                val before = engine.inspect(input)
+                val result = ImageResetProcessor(engine).process(input)
+                assertEquals(TaskStatus.COMPLETED, result.status, result.message)
+                val output = Path.of(result.outputPath!!)
+                val after = engine.inspect(output)
+                assertEquals(expectedFormat, after.format.name)
+                assertEquals(before.width, after.width)
+                assertEquals(before.height, after.height)
+                assertEquals(6, after.orientation)
+                assertTrue(original.contentEquals(Files.readAllBytes(input)))
+                assertTrue(ImageIO.read(output.toFile()) != null)
+            }
+            Files.list(directory).use { files ->
+                assertFalse(files.anyMatch { it.fileName.toString().startsWith(".") })
+            }
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun transparentPngBecomesWhiteJpeg() {
+        val directory = createTempDirectory("image-reset-alpha-")
+        try {
+            val input = directory.resolve("transparent.png")
+            ImageIO.write(BufferedImage(8, 6, BufferedImage.TYPE_INT_ARGB), "png", input.toFile())
+            val result = ImageResetProcessor(engine).process(input)
+            assertEquals(TaskStatus.COMPLETED, result.status, result.message)
+            val image = ImageIO.read(Path.of(result.outputPath!!).toFile())
+            assertEquals(0xFFFFFF, image.getRGB(0, 0) and 0xFFFFFF)
+        } finally {
+            directory.toFile().deleteRecursively()
+        }
     }
 
     private fun createImageIoFixture(path: Path, format: String): Path {

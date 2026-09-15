@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,9 +49,10 @@ private val AccentSoft = Color(0xFFDDE9E2)
 @Preview
 fun App(
     tasks: List<ImageTask> = emptyList(),
-    onFilesDropped: (List<String>) -> Unit = {},
+    onFilesDropped: (List<String>, Boolean) -> Unit = { _, _ -> },
 ) {
     var isDragActive by remember { mutableStateOf(false) }
+    var reduceSynthId by remember { mutableStateOf(false) }
     val completedCount = tasks.count { it.status == TaskStatus.COMPLETED }
     val isWorking = tasks.any { it.status == TaskStatus.QUEUED || it.status == TaskStatus.PROCESSING }
 
@@ -63,7 +65,7 @@ fun App(
                 modifier = Modifier
                     .fillMaxSize()
                     .imageFileDropTarget(
-                        onDropped = onFilesDropped,
+                        onDropped = { onFilesDropped(it, reduceSynthId) },
                         onActiveChanged = { isDragActive = it },
                     )
                     .padding(32.dp),
@@ -82,6 +84,24 @@ fun App(
 
                 Spacer(Modifier.height(24.dp))
 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = reduceSynthId, onCheckedChange = { reduceSynthId = it })
+                    Column {
+                        Text("Reduce SynthID (experimental)", color = Ink)
+                        Text(
+                            "May alter details. First use downloads the engine and ~10 GB of models.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedInk,
+                        )
+                        Text(
+                            "If reduction fails, the converted metadata-reset copy is saved.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MutedInk,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
                 DropZone(
                     active = isDragActive,
                     compact = tasks.isNotEmpty(),
@@ -96,7 +116,7 @@ fun App(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = if (isWorking) "Resetting images…" else "$completedCount new images created",
+                                text = if (isWorking) "Processing images…" else "$completedCount new images created",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Ink,
@@ -145,7 +165,7 @@ private fun DropZone(active: Boolean, compact: Boolean) {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Processing starts automatically",
+                text = "JPEG → PNG · PNG/WebP → JPEG · Starts automatically",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MutedInk,
             )

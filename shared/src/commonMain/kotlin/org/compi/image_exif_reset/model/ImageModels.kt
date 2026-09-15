@@ -14,6 +14,7 @@ data class ImageTask(
     val inputName: String,
     val status: TaskStatus = TaskStatus.QUEUED,
     val detail: String = "Queued",
+    val reduceSynthId: Boolean = false,
 )
 
 enum class SupportedImageFormat(val mimeType: String, val fileExtension: String) {

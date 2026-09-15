@@ -35,7 +35,7 @@ class ImageResetController(
         }
     }
 
-    fun enqueue(paths: List<String>) {
+    fun enqueue(paths: List<String>, reduceSynthId: Boolean = false) {
         scope.launch {
             paths.forEach { rawPath ->
                 val path = runCatching {
@@ -49,15 +49,17 @@ class ImageResetController(
                     id = UUID.randomUUID().toString(),
                     inputPath = key,
                     inputName = path.fileName?.toString() ?: key,
+                    reduceSynthId = reduceSynthId,
                 )
                 tasks += task
-                queue.send(QueueEntry(task.id, path, key))
+                queue.send(QueueEntry(task.id, path, key, reduceSynthId))
             }
         }
     }
 
     fun close() {
         queue.close()
+        processor.close()
     }
 
     private suspend fun process(entry: QueueEntry) {
@@ -71,10 +73,19 @@ class ImageResetController(
             .sorted()
 
         withPathLocks(affectedPaths) {
-            update(entry.taskId) { it.copy(status = TaskStatus.PROCESSING, detail = "Resetting metadata…") }
-            val result = withContext(Dispatchers.IO) { processor.process(entry.path) }
+            update(entry.taskId) { it.copy(status = TaskStatus.PROCESSING, detail = "Converting and resetting metadata…") }
+            val result = withContext(Dispatchers.IO) {
+                processor.process(entry.path, entry.reduceSynthId) { message ->
+                    scope.launch {
+                        update(entry.taskId) {
+                            if (it.status == TaskStatus.PROCESSING) it.copy(detail = message) else it
+                        }
+                    }
+                }
+            }
             update(entry.taskId) { it.copy(status = result.status, detail = result.message) }
             queuedPaths.remove(entry.pathKey)
+            if (queuedPaths.isEmpty()) processor.releaseWorker()
         }
     }
 
@@ -98,6 +109,7 @@ class ImageResetController(
         val taskId: String,
         val path: Path,
         val pathKey: String,
+        val reduceSynthId: Boolean,
     )
 
     companion object {

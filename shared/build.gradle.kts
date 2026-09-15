@@ -19,6 +19,9 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
         }
+        jvmTest.dependencies {
+            implementation(compose.desktop.currentOs)
+        }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
