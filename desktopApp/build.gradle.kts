@@ -1,3 +1,4 @@
+import java.util.zip.ZipFile
 import java.io.File
 import java.util.UUID
 import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
@@ -94,8 +95,23 @@ tasks.withType<AbstractJPackageTask>().configureEach {
             .orElse(providers.environmentVariable("RUNNER_TEMP"))
             .orElse(providers.systemProperty("java.io.tmpdir"))
         val packagingTemp = File(tempBase.get(), "jp-${UUID.randomUUID().toString().take(8)}")
-        freeArgs.addAll("--temp", packagingTemp.absolutePath)
+        val wixResources = layout.buildDirectory.dir("windows-wix-resources").get().asFile
+        freeArgs.addAll("--temp", packagingTemp.absolutePath, "--resource-dir", wixResources.absolutePath)
         doFirst {
+            // Use the selected JDK's own template, changing only cabinet layout.
+            val template = ZipFile(File(javaHome.get(), "jmods/jdk.jpackage.jmod")).use { jmod ->
+                val entry = checkNotNull(jmod.getEntry("classes/jdk/jpackage/internal/resources/main.wxs")) {
+                    "The selected JDK does not provide the WiX 3 MSI template"
+                }
+                jmod.getInputStream(entry).bufferedReader().use { it.readText() }
+            }
+            val singleCabinet = """<Media Id="1" Cabinet="Data.cab" EmbedCab="yes" />"""
+            check(template.contains(singleCabinet)) { "Unexpected JDK MSI cabinet template" }
+            wixResources.mkdirs()
+            File(wixResources, "main.wxs").writeText(template.replace(
+                singleCabinet,
+                """<MediaTemplate CabinetTemplate="image-exif-data{0}.cab" EmbedCab="no" MaximumUncompressedMediaSize="512" CompressionLevel="medium" />""",
+            ))
             // This task owns this uniquely named directory, including after a failed build.
             packagingTemp.deleteRecursively()
             check(packagingTemp.mkdirs()) { "Cannot create jpackage working directory: $packagingTemp" }

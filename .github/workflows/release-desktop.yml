@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: desktop-release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build-macos-arm64:
@@ -141,6 +141,7 @@ jobs:
         run: |
           $msi = Get-ChildItem desktopApp/build/compose/binaries/main/msi/*.msi
           if (@($msi).Count -ne 1) { throw 'Expected exactly one MSI' }
+          if (-not (Get-ChildItem desktopApp/build/compose/binaries/main/msi/*.cab)) { throw 'Missing Windows installer cabinets' }
           $installRoot = Join-Path $env:RUNNER_TEMP 'installed image exif'
           $logs = New-Item -ItemType Directory -Force desktopApp/build/compose/logs/installer-smoke
           $installLog = Join-Path $logs.FullName 'install.log'
@@ -179,7 +180,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: image-exif-reset-windows-x64-${{ env.RELEASE_VERSION }}
-          path: desktopApp/build/compose/binaries/main/msi/*.msi
+          path: |
+            desktopApp/build/compose/binaries/main/msi/*.msi
+            desktopApp/build/compose/binaries/main/msi/*.cab
+          compression-level: 0
           if-no-files-found: error
           retention-days: 14
 
@@ -208,12 +212,21 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           shopt -s nullglob
-          assets=(release-assets/*.dmg release-assets/*.msi)
-          if (( ${#assets[@]} != 2 )); then
-            echo "Expected one DMG and one MSI, found ${#assets[@]} files." >&2
+          dmgs=(release-assets/*.dmg)
+          msis=(release-assets/*.msi)
+          cabinets=(release-assets/*.cab)
+          if (( ${#dmgs[@]} != 1 || ${#msis[@]} != 1 || ${#cabinets[@]} == 0 )); then
+            echo "Expected one DMG, one MSI, and Windows cabinet files." >&2
             exit 1
           fi
 
+          assets=("${dmgs[@]}" "${msis[@]}" "${cabinets[@]}")
+          for asset in "${assets[@]}"; do
+            if (( $(stat -c%s "$asset") >= 2147483648 )); then
+              echo "Release asset exceeds GitHub's size limit: $asset" >&2
+              exit 1
+            fi
+          done
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
           else
