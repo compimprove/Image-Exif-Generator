@@ -28,7 +28,7 @@ jobs:
         shell: bash
         run: |
           if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
-            echo "RELEASE_VERSION=0.0.0" >> "$GITHUB_ENV"
+            echo "RELEASE_VERSION=1.0.0" >> "$GITHUB_ENV"
             exit 0
           fi
           if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -61,6 +61,21 @@ jobs:
         shell: bash
         run: ./gradlew --no-daemon build :desktopApp:packageDmg
 
+      - name: Print macOS packaging diagnostics
+        if: failure()
+        shell: bash
+        run: find desktopApp/build/compose/logs -type f -exec cat {} +
+
+      - name: Upload macOS packaging diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-packaging-diagnostics
+          path: |
+            desktopApp/build/compose/logs/
+            desktopApp/build/compose/tmp/*.args.txt
+          if-no-files-found: ignore
+
       - name: Upload macOS installer
         uses: actions/upload-artifact@v7
         with:
@@ -82,7 +97,7 @@ jobs:
         shell: pwsh
         run: |
           if ($env:GITHUB_REF_TYPE -ne 'tag') {
-            "RELEASE_VERSION=0.0.0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            "RELEASE_VERSION=1.0.0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             exit 0
           }
           if ($env:GITHUB_REF_NAME -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') {

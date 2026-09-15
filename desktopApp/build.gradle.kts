@@ -1,3 +1,4 @@
+import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
@@ -80,4 +81,9 @@ tasks.matching { it.name == "createDistributable" }.configureEach {
             ?.filter { it.name.startsWith("python") }
             ?.forEach { check(it.setExecutable(true, false)) { "Cannot make bundled Python executable: $it" } }
     }
+}
+
+// Preserve the underlying WiX/jpackage error in CI diagnostics.
+tasks.withType<AbstractJPackageTask>().configureEach {
+    freeArgs.add("--verbose")
 }
