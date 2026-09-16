@@ -49,7 +49,7 @@ The tag must match `v<major>.<minor>.<patch>`. The workflow removes the leading
 Silicon DMG and Windows x64 MSI with external cabinet files, and attaches the
 installers and all cabinet files to the GitHub Release for that tag.
 
-**Windows installation:** download the `.msi` and every `image-exif-data*.cab`
+**Windows installation:** download the `.msi` and every `data*.cab`
 asset from the same release into one folder, then open the MSI. Keep the files
 together; the MSI requires the cabinet files to install the bundled CUDA runtime.
 
@@ -128,3 +128,6 @@ The CUDA runtime is split into external cabinets using WiX MediaTemplate with a
 512 MiB target for uncompressed content per cabinet. This avoids the single-CAB
 size failure while retaining NVIDIA GPU support. A single large file may exceed
 the target size, but release assets are checked to stay below 2 GiB each.
+
+Local Windows installer builds require WiX Toolset 3 on `PATH`; the release
+workflow verifies the preinstalled toolset before packaging.

@@ -129,7 +129,7 @@ afterEvaluate {
                     wixResources.mkdirs()
                     File(wixResources, "main.wxs").writeText(template.replace(
                         singleCabinet,
-                        """<MediaTemplate CabinetTemplate="image-exif-data{0}.cab" EmbedCab="no" MaximumUncompressedMediaSize="512" CompressionLevel="medium" />""",
+                        """<MediaTemplate CabinetTemplate="data{0}.cab" EmbedCab="no" MaximumUncompressedMediaSize="512" CompressionLevel="medium" />""",
                     ))
                     packagingTemp.deleteRecursively()
                     check(packagingTemp.mkdirs()) { "Cannot create jpackage directory: $packagingTemp" }
