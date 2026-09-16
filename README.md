@@ -46,8 +46,12 @@ git push origin v2.15.2
 
 The tag must match `v<major>.<minor>.<patch>`. The workflow removes the leading
 `v`, uses the remaining value as the native package version, builds an Apple
-Silicon DMG and Windows x64 MSI, and attaches both installers to the GitHub
-Release for that tag.
+Silicon DMG and Windows x64 MSI with external cabinet files, and attaches the
+installers and all cabinet files to the GitHub Release for that tag.
+
+**Windows installation:** download the `.msi` and every `image-exif-data*.cab`
+asset from the same release into one folder, then open the MSI. Keep the files
+together; the MSI requires the cabinet files to install the bundled CUDA runtime.
 
 The Windows MSI installs under Program Files by default, lets the user choose a
 different destination, and creates both a desktop shortcut and an Image EXIF
@@ -111,3 +115,16 @@ packaged engine end-to-end, set `IMAGE_EXIF_RESET_MODEL_TEST=1` and
 `IMAGE_EXIF_RESET_SYNTHID_ENGINE` to the package's `resources/synthid` directory,
 then run `:shared:jvmTest --tests '*RealSynthIdIntegrationTest'`. This exercises
 real regeneration and metadata verification, not SynthID detection accuracy.
+
+Installer packaging also runs on pull requests, without publishing a release.
+Windows CI installs the MSI, checks the installed Python/CUDA runtime, and
+uninstalls it. Failed packaging logs are retained as workflow artifacts.
+
+Windows MSI builds use a short, task-owned jpackage working directory to keep
+bundled Python paths within WiX 3's path limits. Local builds can override its
+parent with `-PwindowsJpackageTempDir=C:/temp` if the user temp path is too long.
+
+The CUDA runtime is split into external cabinets using WiX MediaTemplate with a
+512 MiB target for uncompressed content per cabinet. This avoids the single-CAB
+size failure while retaining NVIDIA GPU support. A single large file may exceed
+the target size, but release assets are checked to stay below 2 GiB each.
